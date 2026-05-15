@@ -375,17 +375,7 @@
   </header>
 
   <!-- API KEY SETUP -->
-  <div class="setup-card" id="setupCard">
-    <div class="setup-title">🔑 أدخل مفتاح Claude API</div>
-    <div class="setup-desc">البرنامج يحتاج مفتاح API من Anthropic ليتصل بـ Claude ويسعّر الدومينات بدقة عالية. المفتاح بيتحفظ على جهازك فقط.</div>
-    <div class="setup-row">
-      <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-..." onkeydown="if(event.key==='Enter')saveKey()" />
-      <button class="price-btn" onclick="saveKey()" style="height:42px;padding:0 18px;font-size:13px;">حفظ وتفعيل</button>
-    </div>
-    <div class="setup-note">
-      احصل على مفتاحك من <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com/settings/keys</a> — مجاني للبدء.
-    </div>
-  </div>
+  <div id="setupCard" style="display:none"></div>
 
   <!-- TABS -->
   <div class="tabs">
@@ -454,13 +444,15 @@ const SAVED_API_KEY = "sk-ant-api03-z6vzmT1dYvYRCu61zQQ28K7UjeA2cOsBHR_CcMvItwtH
 
 let salesDB=[];
 let history_=[];
-let apiKey = SAVED_API_KEY !== "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" ? SAVED_API_KEY : "";
+let apiKey = "server";
 try { salesDB=JSON.parse(localStorage.getItem("dpSalesDB")||"[]"); } catch(e){}
 try { history_=JSON.parse(localStorage.getItem("dpHistory")||"[]"); } catch(e){}
-try { if(!apiKey) apiKey=localStorage.getItem("dpApiKey")||""; } catch(e){}
+
 
 // INIT
 function init(){
+  document.getElementById("setupCard").style.display="none";
+  setStatus(true);
   if(apiKey){
     document.getElementById("setupCard").classList.add("hidden");
     document.getElementById("apiKeyInput").value=apiKey;
@@ -507,7 +499,7 @@ function findComps(tld,len){
 
 // ── CLAUDE API ──
 async function callClaude(domain,name,tld){
-  if(!apiKey) throw new Error('no key');
+  
   const comps=findComps(tld,name.length);
   const compStr=comps.length>0?'\n\nمبيعات من قاعدة بيانات المستخدم:\n'+comps.map(c=>`- ${c.domain}: $${c.price} (${c.source})`).join('\n'):'';
 
