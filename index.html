@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Domain Pricer — تسعير الدومينات</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0e10;
+    --bg2: #17171a;
+    --bg3: #1f1f24;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #f0f0f2;
+    --text2: #9090a0;
+    --text3: #55555f;
+    --accent: #4f8ef7;
+    --accent2: #2a5ed4;
+    --green: #3ecf8e;
+    --amber: #f5a623;
+    --red: #e5534b;
+    --radius: 10px;
+    --radius-lg: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'IBM Plex Sans Arabic', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    direction: rtl;
+  }
+
+  /* ── LAYOUT ── */
+  .shell {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 0 20px 60px;
+  }
+
+  /* ── HEADER ── */
+  header {
+    padding: 36px 0 32px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    border-bottom: 0.5px solid var(--border);
+    margin-bottom: 32px;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .logo-icon {
+    width: 40px; height: 40px;
+    background: var(--accent);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .logo-text { font-size: 22px; font-weight: 600; letter-spacing: -0.5px; }
+  .logo-sub { font-size: 12px; color: var(--text3); margin-top: 2px; font-family: 'IBM Plex Mono', monospace; }
+  .api-status {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 12px; color: var(--text2);
+  }
+  .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--text3);
+    transition: background .3s;
+  }
+  .dot.connected { background: var(--green); box-shadow: 0 0 8px var(--green); }
+
+  /* ── API KEY SETUP ── */
+  .setup-card {
+    background: var(--bg2);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    margin-bottom: 24px;
+    animation: fadeIn .3s ease;
+  }
+  .setup-title { font-size: 15px; font-weight: 500; margin-bottom: 6px; }
+  .setup-desc { font-size: 13px; color: var(--text2); margin-bottom: 16px; line-height: 1.6; }
+  .setup-row { display: flex; gap: 8px; }
+  .setup-row input {
+    flex: 1;
+    background: var(--bg3);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    padding: 0 14px;
+    height: 42px;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .setup-row input:focus { border-color: var(--accent); }
+  .setup-note { font-size: 11px; color: var(--text3); margin-top: 10px; }
+  .setup-note a { color: var(--accent); text-decoration: none; }
+
+  /* ── TABS ── */
+  .tabs {
+    display: flex; gap: 4px;
+    margin-bottom: 24px;
+    background: var(--bg2);
+    border-radius: var(--radius);
+    padding: 4px;
+    border: 0.5px solid var(--border);
+  }
+  .tab {
+    flex: 1; padding: 9px 0;
+    border: none; background: transparent;
+    color: var(--text2); font-size: 13px;
+    font-family: 'IBM Plex Sans Arabic', sans-serif;
+    cursor: pointer; border-radius: 7px;
+    transition: all .2s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { background: var(--bg3); color: var(--text); border: 0.5px solid var(--border2); }
+
+  /* ── SEARCH BOX ── */
+  .search-wrap {
+    background: var(--bg2);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .search-inner { display: flex; gap: 10px; }
+  .domain-input {
+    flex: 1;
+    background: var(--bg3);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-size: 16px;
+    font-family: 'IBM Plex Mono', monospace;
+    padding: 0 16px;
+    height: 50px;
+    outline: none;
+    transition: border-color .2s;
+    direction: ltr;
+    text-align: left;
+  }
+  .domain-input::placeholder { color: var(--text3); font-family: 'IBM Plex Mono', monospace; }
+  .domain-input:focus { border-color: var(--accent); }
+  .price-btn {
+    height: 50px; padding: 0 24px;
+    background: var(--accent);
+    color: #fff; font-size: 14px; font-weight: 500;
+    border: none; border-radius: var(--radius);
+    cursor: pointer; white-space: nowrap;
+    font-family: 'IBM Plex Sans Arabic', sans-serif;
+    transition: background .2s, transform .1s;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .price-btn:hover { background: var(--accent2); }
+  .price-btn:active { transform: scale(0.98); }
+  .price-btn:disabled { background: var(--bg3); color: var(--text3); cursor: not-allowed; }
+
+  /* ── SPINNER ── */
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.2);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ── RESULT ── */
+  .result { animation: fadeIn .35s ease; }
+  .result-main {
+    background: var(--bg2);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    margin-bottom: 14px;
+  }
+  .result-domain {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px; color: var(--text2);
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .src-tag {
+    font-size: 10px; padding: 2px 8px;
+    border-radius: 99px;
+    background: rgba(79,142,247,0.15);
+    color: var(--accent);
+    font-family: 'IBM Plex Sans Arabic', sans-serif;
+  }
+  .src-tag.rule {
+    background: rgba(245,166,35,0.12);
+    color: var(--amber);
+  }
+  .price-hero {
+    display: flex; align-items: baseline;
+    gap: 12px; flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  .price-big {
+    font-size: 44px; font-weight: 600;
+    letter-spacing: -2px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--text);
+  }
+  .price-range { font-size: 14px; color: var(--text3); font-family: 'IBM Plex Mono', monospace; }
+  .conf-badge {
+    margin-right: auto;
+    font-size: 11px; padding: 4px 10px;
+    border-radius: 99px; font-weight: 500;
+  }
+  .conf-high { background: rgba(62,207,142,0.12); color: var(--green); }
+  .conf-med { background: rgba(245,166,35,0.12); color: var(--amber); }
+  .conf-low { background: rgba(229,83,75,0.12); color: var(--red); }
+  .conf-bar-wrap { margin: 14px 0 4px; }
+  .conf-bar-label { font-size: 11px; color: var(--text3); margin-bottom: 5px; }
+  .conf-bar-track {
+    height: 3px; background: var(--bg3);
+    border-radius: 99px; overflow: hidden;
+  }
+  .conf-bar-fill {
+    height: 100%; border-radius: 99px;
+    transition: width .7s cubic-bezier(.4,0,.2,1);
+  }
+
+  /* ── FACTORS ── */
+  .factors {
+    display: grid; grid-template-columns: repeat(4,1fr);
+    gap: 8px; margin-top: 18px;
+  }
+  .factor {
+    background: var(--bg3);
+    border-radius: var(--radius);
+    padding: 12px 10px;
+    border: 0.5px solid var(--border);
+  }
+  .factor-label { font-size: 10px; color: var(--text3); margin-bottom: 5px; }
+  .factor-value { font-size: 13px; font-weight: 500; color: var(--text); }
+
+  /* ── AI REASONING ── */
+  .reasoning-box {
+    background: var(--bg3);
+    border-radius: var(--radius);
+    border: 0.5px solid var(--border);
+    padding: 14px 16px;
+    margin-top: 14px;
+    font-size: 13px; color: var(--text2);
+    line-height: 1.75;
+  }
+  .reasoning-box strong { color: var(--text); font-weight: 500; }
+
+  /* ── COMPS ── */
+  .comps-card {
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 18px 20px;
+    margin-bottom: 14px;
+    animation: fadeIn .4s ease;
+  }
+  .comps-title { font-size: 12px; color: var(--text3); margin-bottom: 12px; letter-spacing: 0.04em; }
+  .comp-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 9px 0;
+    border-bottom: 0.5px solid var(--border);
+    font-size: 13px;
+  }
+  .comp-row:last-child { border-bottom: none; }
+  .comp-domain { font-family: 'IBM Plex Mono', monospace; color: var(--text); }
+  .comp-price { color: var(--text2); font-family: 'IBM Plex Mono', monospace; }
+  .comp-note { font-size: 11px; color: var(--text3); margin-right: 6px; font-family: 'IBM Plex Sans Arabic', sans-serif; }
+
+  /* ── FOOTER NOTE ── */
+  .footer-note { font-size: 11px; color: var(--text3); margin-top: 6px; }
+
+  /* ── EMPTY STATE ── */
+  .empty {
+    text-align: center; padding: 48px 0;
+    color: var(--text3); font-size: 14px;
+  }
+  .empty-icon { font-size: 36px; display: block; margin-bottom: 10px; }
+
+  /* ── DATABASE TAB ── */
+  .db-section { animation: fadeIn .3s ease; }
+  .db-add {
+    background: var(--bg2);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius-lg);
+    padding: 20px; margin-bottom: 20px;
+  }
+  .db-add-title { font-size: 13px; color: var(--text2); margin-bottom: 12px; }
+  .db-add-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+  .db-add-grid input {
+    background: var(--bg3); border: 0.5px solid var(--border);
+    border-radius: var(--radius); color: var(--text);
+    font-family: 'IBM Plex Sans Arabic', sans-serif;
+    font-size: 13px; padding: 0 12px; height: 38px; outline: none;
+    transition: border-color .2s;
+  }
+  .db-add-grid input:focus { border-color: var(--accent); }
+  .add-btn {
+    height: 36px; padding: 0 16px;
+    background: var(--bg3); border: 0.5px solid var(--border2);
+    color: var(--text); font-size: 13px; cursor: pointer;
+    border-radius: var(--radius);
+    font-family: 'IBM Plex Sans Arabic', sans-serif;
+    transition: background .2s;
+  }
+  .add-btn:hover { background: var(--accent); border-color: var(--accent); }
+  .db-table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    text-align: right; padding: 8px 0;
+    border-bottom: 0.5px solid var(--border2);
+    color: var(--text3); font-weight: 400;
+    font-size: 11px; letter-spacing: 0.04em;
+  }
+  td {
+    padding: 10px 0;
+    border-bottom: 0.5px solid var(--border);
+    color: var(--text2);
+  }
+  td:first-child { font-family: 'IBM Plex Mono', monospace; color: var(--text); }
+  .del-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--text3); font-size: 16px; padding: 0;
+    transition: color .2s;
+  }
+  .del-btn:hover { color: var(--red); }
+
+  /* ── HISTORY TAB ── */
+  .hist-section { animation: fadeIn .3s ease; }
+  .hist-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 0; border-bottom: 0.5px solid var(--border);
+  }
+  .hist-row:last-child { border-bottom: none; }
+  .hist-domain { font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: var(--text); }
+  .hist-meta { font-size: 11px; color: var(--text3); margin-top: 3px; }
+  .hist-price { font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: var(--text2); }
+
+  /* ── HIDDEN ── */
+  .hidden { display: none; }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🌐</div>
+      <div>
+        <div class="logo-text">Domain Pricer</div>
+        <div class="logo-sub">powered by Claude AI</div>
+      </div>
+    </div>
+    <div class="api-status">
+      <div class="dot" id="statusDot"></div>
+      <span id="statusText">غير متصل</span>
+    </div>
+  </header>
+
+  <!-- API KEY SETUP -->
+  <div class="setup-card" id="setupCard">
+    <div class="setup-title">🔑 أدخل مفتاح Claude API</div>
+    <div class="setup-desc">البرنامج يحتاج مفتاح API من Anthropic ليتصل بـ Claude ويسعّر الدومينات بدقة عالية. المفتاح بيتحفظ على جهازك فقط.</div>
+    <div class="setup-row">
+      <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-..." onkeydown="if(event.key==='Enter')saveKey()" />
+      <button class="price-btn" onclick="saveKey()" style="height:42px;padding:0 18px;font-size:13px;">حفظ وتفعيل</button>
+    </div>
+    <div class="setup-note">
+      احصل على مفتاحك من <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com/settings/keys</a> — مجاني للبدء.
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('pricer',this)">⚡ تسعير</button>
+    <button class="tab" onclick="switchTab('history',this)">📋 السجل</button>
+    <button class="tab" onclick="switchTab('database',this)">🗄️ قاعدة البيانات</button>
+  </div>
+
+  <!-- ══ TAB: PRICER ══ -->
+  <div id="tab-pricer">
+    <div class="search-wrap">
+      <div class="search-inner">
+        <input class="domain-input" type="text" id="domainInput"
+          placeholder="store.com  /  tech.io  /  goldbank.com"
+          onkeydown="if(event.key==='Enter')runPricer()" />
+        <button class="price-btn" id="priceBtn" onclick="runPricer()">
+          <span id="btnIcon">⚡</span>
+          <span id="btnLabel">سعّر الآن</span>
+        </button>
+      </div>
+    </div>
+    <div id="result-area">
+      <div class="empty">
+        <span class="empty-icon">🌐</span>
+        أدخل أي دومين واضغط سعّر — Claude هيحلله فوراً
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ TAB: HISTORY ══ -->
+  <div id="tab-history" class="hidden">
+    <div class="hist-section" id="histSection"></div>
+  </div>
+
+  <!-- ══ TAB: DATABASE ══ -->
+  <div id="tab-database" class="hidden">
+    <div class="db-section">
+      <div class="db-add">
+        <div class="db-add-title">أضف مبيعة دومين حقيقية — البرنامج هيستخدمها لتحسين التسعير تلقائياً</div>
+        <div class="db-add-grid">
+          <input type="text" id="add-domain" placeholder="domain.com" />
+          <input type="number" id="add-price" placeholder="السعر بالدولار" />
+          <input type="text" id="add-source" placeholder="Sedo / Afternic / Manual" />
+        </div>
+        <button class="add-btn" onclick="addSale()">+ أضف</button>
+      </div>
+      <div class="db-table-wrap">
+        <table>
+          <thead><tr><th>الدومين</th><th>السعر</th><th>المصدر</th><th>التاريخ</th><th></th></tr></thead>
+          <tbody id="db-rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /shell -->
+
+<script>
+// ── DATA ──
+const TLD_MULT={com:1.0,net:0.45,org:0.40,io:0.60,co:0.35,ai:0.80,app:0.50,dev:0.45,online:0.20,site:0.18,store:0.28,shop:0.25,info:0.15,biz:0.12,xyz:0.08,club:0.10,me:0.25,us:0.20,uk:0.22,de:0.18,fr:0.15,ae:0.22,sa:0.18};
+const LEN_S={1:2.0,2:1.8,3:1.5,4:1.2,5:1.0,6:0.85,7:0.70,8:0.55,9:0.40,10:0.30};
+const EN_WORDS=new Set(['tech','store','shop','cloud','hub','app','net','web','data','pay','buy','sell','rent','loan','bank','cash','gold','life','home','house','land','farm','food','eat','cook','health','fit','care','love','learn','edu','school','safe','secure','smart','fast','quick','easy','best','top','pro','max','go','my','get','now','live','real','true','pure','fresh','prime','ace','one','all','big','new','auto','car','air','sea','sky','sun','law','tax','med','bio','eco','green','blue','cyber','digi','geo','meta','neo','omni','travel','hotel','book','deal','price','sale','free','plus','next','high','low','open','key','hub','box','lab','zone','spot','base','link','flow','way','path','run','grow','move','work','play','help','find','send','read','view','list','plan','task','team','lead','rise','star','moon','fire','wave','edge','core','peak','bold','swift','bright','clear','clean','fresh','rich','easy','smart','safe','fair','wide','deep','long','full','soft','hard','dark','warm','cold','hot','cool','good','nice','kind','true','fair','just','raw','pure','lean','zen','arc','bit','bot','cue','dex','dot','era','fig','gig','ivy','jot','kit','log','map','nix','pod','rox','tag','tap','via','viz','zip']);
+
+// API KEY - replace the value below with your Claude API key
+const SAVED_API_KEY = "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";
+
+let salesDB=[];
+let history_=[];
+let apiKey = SAVED_API_KEY !== "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" ? SAVED_API_KEY : "";
+try { salesDB=JSON.parse(localStorage.getItem("dpSalesDB")||"[]"); } catch(e){}
+try { history_=JSON.parse(localStorage.getItem("dpHistory")||"[]"); } catch(e){}
+try { if(!apiKey) apiKey=localStorage.getItem("dpApiKey")||""; } catch(e){}
+
+// INIT
+function init(){
+  if(apiKey){
+    document.getElementById("setupCard").classList.add("hidden");
+    document.getElementById("apiKeyInput").value=apiKey;
+    setStatus(true);
+  }
+  renderDB();
+  renderHistory();
+}
+
+function saveKey(){
+  const k=document.getElementById("apiKeyInput").value.trim();
+  if(!k||!k.startsWith("sk-")) return alert("المفتاح يجب ان يبدا بـ sk-");
+  apiKey=k;
+  try { localStorage.setItem("dpApiKey",k); } catch(e){}
+  document.getElementById("setupCard").classList.add("hidden");
+  setStatus(true);
+}
+
+function setStatus(on){
+  document.getElementById('statusDot').className='dot'+(on?' connected':'');
+  document.getElementById('statusText').textContent=on?'Claude متصل':'غير متصل';
+}
+
+// ── RULE ENGINE ──
+function getLenScore(l){return LEN_S[l]||(l<=15?0.20:0.10);}
+function isPronounceable(n){
+  const v=new Set('aeiou');let c=0;
+  for(let ch of n){if(v.has(ch))c=0;else{c++;if(c>3)return false;}}
+  const vr=[...n].filter(ch=>v.has(ch)).length/n.length;
+  return vr>0.18;
+}
+function rulePrice(name,tld){
+  const tm=TLD_MULT[tld]||0.10;
+  const ls=getLenScore(name.length);
+  const wb=EN_WORDS.has(name)?1.4:1.0;
+  const dp=name.includes('-')?0.5:1.0;
+  const np=/\d/.test(name)?0.7:1.0;
+  const pp=isPronounceable(name)?1.1:0.9;
+  return Math.round(800*tm*ls*wb*dp*np*pp);
+}
+function findComps(tld,len){
+  return salesDB.filter(s=>s.tld===tld&&Math.abs(s.length-len)<=2).slice(0,4);
+}
+
+// ── CLAUDE API ──
+async function callClaude(domain,name,tld){
+  if(!apiKey) throw new Error('no key');
+  const comps=findComps(tld,name.length);
+  const compStr=comps.length>0?'\n\nمبيعات من قاعدة بيانات المستخدم:\n'+comps.map(c=>`- ${c.domain}: $${c.price} (${c.source})`).join('\n'):'';
+
+  const prompt=`أنت خبير تسعير دومينات محترف مع خبرة واسعة في سوق الدومينات الثانوي. قيّم الدومين التالي وأعطِ سعراً واقعياً بالدولار الأمريكي.
+
+الدومين: ${domain}
+الامتداد: .${tld}
+الاسم: ${name}
+عدد الحروف: ${name.length}${compStr}
+
+اعتمد على:
+- بيانات مبيعات الدومينات التاريخية من Sedo وAfternic وNameBio
+- قيمة الكلمات التجارية وطلب السوق
+- قوة الامتداد وشعبيته
+- سهولة التذكر والنطق
+- وجود أرقام أو هايفن (يخفض القيمة)
+
+أجب بـ JSON فقط بدون أي نص خارجه:
+{"price":5000,"low":2000,"high":15000,"confidence":75,"reasoning":"شرح 2-3 جمل بالعربي لسبب السعر","comparables":[{"domain":"similar.com","price":4800,"note":"مبيع Sedo 2023"},{"domain":"related.com","price":6200,"note":"مبيع Afternic 2024"}],"factors":{"tld_strength":"قوي","memorability":"سهل جداً","commercial_value":"عالي","keyword_demand":"مرتفع"}}`;
+
+  // الطلب يروح للسيرفر المحلي اللي بيعمل proxy لـ Anthropic
+  const r=await fetch('/api/chat',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key':apiKey,
+      'anthropic-version':'2023-06-01'
+    },
+    body:JSON.stringify({
+      model:'claude-sonnet-4-5',
+      max_tokens:1000,
+      messages:[{role:'user',content:prompt}]
+    })
+  });
+  if(r.status===401) throw new Error('invalid_key');
+  if(!r.ok) throw new Error('api_error_'+r.status);
+  const data=await r.json();
+  const txt=data.content.map(b=>b.text||'').join('');
+  const m=txt.match(/\{[\s\S]*\}/);
+  if(!m) throw new Error('no_json');
+  return JSON.parse(m[0]);
+}
+
+// ── MAIN PRICER ──
+async function runPricer(){
+  const raw=document.getElementById('domainInput').value.trim().toLowerCase().replace(/^https?:\/\//,'').replace(/\//,'');
+  if(!raw) return;
+  const full=raw.includes('.')?raw:raw+'.com';
+  const parts=full.split('.');
+  const tld=parts.slice(1).join('.');
+  const name=parts[0];
+
+  // UI: loading
+  const btn=document.getElementById('priceBtn');
+  btn.disabled=true;
+  document.getElementById('btnIcon').innerHTML='<span class="spinner" style="border-top-color:#fff"></span>';
+  document.getElementById('btnLabel').textContent='جاري التحليل...';
+
+  document.getElementById('result-area').innerHTML=`
+    <div style="text-align:center;padding:40px 0;color:var(--text3);font-size:14px;">
+      <div class="spinner" style="width:24px;height:24px;border-width:2.5px;border-top-color:var(--accent);margin:0 auto 14px;"></div>
+      Claude بيحلل <span style="color:var(--text);font-family:'IBM Plex Mono',monospace">${full}</span>...
+    </div>`;
+
+  let aiResult=null,source='rule';
+  let finalPrice,lo,hi,confidence,reasoning,comparables=[],factors={};
+  const ruleP=rulePrice(name,tld);
+
+  try{
+    aiResult=await callClaude(full,name,tld);
+    // blend with local DB
+    const comps=findComps(tld,name.length);
+    const dbW=Math.min(comps.length*0.12,0.40);
+    let blended=aiResult.price*(1-dbW);
+    if(comps.length>0){
+      const avgDB=comps.reduce((s,c)=>s+c.price,0)/comps.length;
+      blended+=avgDB*dbW;
+    }
+    finalPrice=Math.round(blended);
+    lo=aiResult.low; hi=aiResult.high;
+    confidence=Math.max(aiResult.confidence,50);
+    reasoning=aiResult.reasoning;
+    comparables=aiResult.comparables||[];
+    factors=aiResult.factors||{};
+    source='ai';
+    setStatus(true);
+  }catch(err){
+    if(err.message==='invalid_key'){
+      document.getElementById('setupCard').classList.remove('hidden');
+      setStatus(false);
+    }
+    finalPrice=ruleP;
+    lo=Math.round(ruleP*0.5); hi=Math.round(ruleP*2.2);
+    confidence=30;
+    reasoning=err.message==='no key'
+      ?'أدخل مفتاح API أولاً لتفعيل Claude AI.'
+      :'تعذّر الاتصال بـ Claude — السعر مبني على المحرك المحلي (الامتداد، الطول، جودة الاسم).';
+    source='rule';
+  }
+
+  // render
+  const grade=confidence>=70?'high':confidence>=45?'med':'low';
+  const gradeLabel=grade==='high'?'ثقة عالية':grade==='med'?'ثقة متوسطة':'ثقة منخفضة';
+  const barColor=grade==='high'?'var(--green)':grade==='med'?'var(--amber)':'var(--red)';
+  const dbComps=findComps(tld,name.length);
+
+  const factorsHTML=Object.keys(factors).length>0
+    ?Object.entries(factors).map(([k,v])=>{
+        const labels={tld_strength:'قوة الامتداد',memorability:'سهولة الحفظ',commercial_value:'القيمة التجارية',keyword_demand:'الطلب على الكلمة',keyword_strength:'قوة الكلمة'};
+        return `<div class="factor"><div class="factor-label">${labels[k]||k}</div><div class="factor-value">${v}</div></div>`;
+      }).join('')
+    :[
+        ['الامتداد','.'+tld],
+        ['عدد الحروف',name.length+' حروف'],
+        ['كلمة قاموس',EN_WORDS.has(name)?'✓ نعم':'لا'],
+        ['سهولة النطق',isPronounceable(name)?'سهل':'صعب']
+      ].map(([l,v])=>`<div class="factor"><div class="factor-label">${l}</div><div class="factor-value">${v}</div></div>`).join('');
+
+  const allComps=[...comparables,...dbComps.map(c=>({domain:c.domain,price:c.price,note:c.source}))];
+  const compsHTML=allComps.length>0?`
+    <div class="comps-card">
+      <div class="comps-title">مبيعات مرجعية</div>
+      ${allComps.slice(0,6).map(c=>`
+        <div class="comp-row">
+          <span class="comp-domain">${c.domain}</span>
+          <span class="comp-price">$${Number(c.price).toLocaleString()}<span class="comp-note">${c.note||''}</span></span>
+        </div>`).join('')}
+    </div>`:'';
+
+  document.getElementById('result-area').innerHTML=`
+    <div class="result">
+      <div class="result-main">
+        <div class="result-domain">
+          ${full}
+          <span class="src-tag${source==='rule'?' rule':''}">${source==='ai'?'Claude AI':'Rule-based'}</span>
+        </div>
+        <div class="price-hero">
+          <span class="price-big">$${finalPrice.toLocaleString()}</span>
+          <span class="price-range">$${lo.toLocaleString()} — $${hi.toLocaleString()}</span>
+          <span class="conf-badge conf-${grade}">${gradeLabel} · ${confidence}%</span>
+        </div>
+        <div class="conf-bar-wrap">
+          <div class="conf-bar-label">مستوى الثقة في التقييم</div>
+          <div class="conf-bar-track"><div class="conf-bar-fill" style="width:${confidence}%;background:${barColor}"></div></div>
+        </div>
+        <div class="factors">${factorsHTML}</div>
+        <div class="reasoning-box"><strong>تحليل Claude:</strong> ${reasoning}</div>
+      </div>
+      ${compsHTML}
+      <div class="footer-note">
+        ${source==='ai'?'✓ مدعوم بـ Claude AI + بيانات تدريب ضخمة':'⚠️ محرك محلي — أضف مفتاح API لتفعيل Claude'}
+        ${dbComps.length>0?' · مُحسَّن بـ '+dbComps.length+' مبيعات من قاعدة بياناتك':''}
+      </div>
+    </div>`;
+
+  // save to history
+  history_.unshift({domain:full,price:finalPrice,lo,hi,confidence,source,date:new Date().toLocaleDateString('ar-EG')});
+  if(history_.length>100)history_.pop();
+  localStorage.setItem('dpHistory',JSON.stringify(history_));
+
+  btn.disabled=false;
+  document.getElementById('btnIcon').textContent='⚡';
+  document.getElementById('btnLabel').textContent='سعّر الآن';
+}
+
+// ── DATABASE ──
+function saveDB(){ localStorage.setItem('dpSalesDB',JSON.stringify(salesDB)); }
+function addSale(){
+  const d=document.getElementById('add-domain').value.trim().toLowerCase();
+  const p=parseFloat(document.getElementById('add-price').value);
+  const src=document.getElementById('add-source').value.trim()||'Manual';
+  if(!d||!p||p<=0){ alert('أدخل اسم الدومين والسعر'); return; }
+  const pts=d.split('.');
+  salesDB.unshift({id:Date.now(),domain:d,price:p,tld:pts.slice(1).join('.')||'com',length:pts[0].length,source:src,date:new Date().toISOString().split('T')[0]});
+  saveDB(); renderDB();
+  ['add-domain','add-price','add-source'].forEach(id=>document.getElementById(id).value='');
+}
+function deleteSale(id){
+  salesDB=salesDB.filter(s=>s.id!==id);
+  saveDB(); renderDB();
+}
+function renderDB(){
+  const tb=document.getElementById('db-rows');
+  if(!tb) return;
+  if(!salesDB.length){
+    tb.innerHTML='<tr><td colspan="5" style="color:var(--text3);padding:16px 0;text-align:center">لا توجد بيانات بعد — أضف مبيعات لتحسين الدقة</td></tr>';
+    return;
+  }
+  tb.innerHTML=salesDB.map(s=>`
+    <tr>
+      <td>${s.domain}</td>
+      <td>$${Number(s.price).toLocaleString()}</td>
+      <td style="color:var(--text3)">${s.source||'—'}</td>
+      <td style="color:var(--text3);font-size:12px">${s.date||'—'}</td>
+      <td><button class="del-btn" onclick="deleteSale(${s.id})" title="حذف">×</button></td>
+    </tr>`).join('');
+}
+
+// ── HISTORY ──
+function renderHistory(){
+  const el=document.getElementById('histSection');
+  if(!el) return;
+  if(!history_.length){
+    el.innerHTML='<div class="empty"><span class="empty-icon">📋</span>لا يوجد سجل بعد</div>';
+    return;
+  }
+  el.innerHTML=history_.map(h=>`
+    <div class="hist-row">
+      <div>
+        <div class="hist-domain">${h.domain}</div>
+        <div class="hist-meta">${h.date} · ${h.source==='ai'?'Claude AI':'Rule-based'} · ثقة ${h.confidence}%</div>
+      </div>
+      <div class="hist-price">$${Number(h.price).toLocaleString()}</div>
+    </div>`).join('');
+}
+
+// ── TABS ──
+function switchTab(name,btn){
+  ['pricer','history','database'].forEach(t=>{
+    document.getElementById('tab-'+t).classList.add('hidden');
+  });
+  document.getElementById('tab-'+name).classList.remove('hidden');
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if(name==='database') renderDB();
+  if(name==='history') renderHistory();
+}
+
+init();
+</script>
+</body>
+</html>
